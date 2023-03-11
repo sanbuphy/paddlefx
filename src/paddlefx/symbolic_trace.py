@@ -1,25 +1,14 @@
 import builtins
 import functools
 
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    NamedTuple,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import Any, Callable, Dict, NamedTuple
 
 import paddle
 import paddle.nn
 
 from .graph import Graph
 from .graph_layer import GraphLayer
-from .node import Node, base_types, map_aggregate
+from .node import base_types, map_aggregate
 from .proxy import Proxy, _create_proxy
 
 MODULES_TO_PATCH = (paddle, paddle.nn, paddle.nn.functional)
@@ -40,8 +29,12 @@ def _find_module(root, m):
 
 
 def _is_leaf_module(m) -> bool:
-    return m.__module__.startswith("paddle.nn") and not isinstance(
-        m, paddle.nn.Sequential
+    return (
+        m.__module__.startswith("paddle.nn")
+        # `paddle.fluid.dygraph.nn` has removed in paddlepaddle 2.5.0 (develop),
+        # but still keep it for compatibility with paddlepaddle <= 2.4
+        or m.__module__.startswith("paddle.fluid.dygraph.nn")
+        and not isinstance(m, paddle.nn.Sequential)
     )
 
 
@@ -152,7 +145,7 @@ def _create_wrapped_func(orig_fn):
         proxy = _find_proxy(args, kwargs)
         if proxy is not None:
             return_proxy = _create_proxy(
-                proxy.tracer, 'call_function', orig_fn, args, kwargs, orig_fn.__name__
+                proxy.tracer, 'call_function', orig_fn, args, kwargs
             )
             return return_proxy
         return orig_fn(*args, **kwargs)
