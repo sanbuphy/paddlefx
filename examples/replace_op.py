@@ -23,7 +23,7 @@ class MyNet(paddle.nn.Layer):
         y = paddle.add(x=x, y=x)
         y = paddle.add(x=x, y=y)
         y = paddle.add(x=x, y=y)
-        return paddle.nn.functional.relu(x=y)
+        return paddle.nn.functional.relu(x=y),x+x,x.add(x)
     
 traced_layer = symbolic_trace(MyNet())
 
@@ -31,13 +31,21 @@ traced_layer.graph.print_tabular()
 
 patterns = set([operator.add, paddle.add, "add"])
 
-
+print(traced_layer.graph.nodes)
 for node in traced_layer.graph.nodes:
     if node.op == "call_function":
-        if node.target == paddle.add:
+        if node.target in patterns:
             # new_node = traced_layer.graph.call_function(paddle.bitwise_and, node.args, node.kwargs)
             node.target = paddle.subtract
             node.name = paddle.subtract.__name__
+    if node.op == "out":
+        if node.target in patterns:
+            node.
+
+
+
+# for node in traced_layer.graph.nodes:
+#     print(node)
 
 # for n in traced_layer.graph.nodes:
 #     if any(n.target == pattern for pattern in patterns):
